@@ -872,6 +872,7 @@ def blogs(request):
                 'feedback': blog.feedback
             }
             data.append(blogs_data)
+        print(data)
         return JsonResponse({'status': True, 'data': data}, status=200, safe=False)
     return JsonResponse({'status': False, 'message': '不支持的请求方法'}, status=405, safe=False)
 
@@ -882,6 +883,8 @@ def echarts(request):
         return HttpResponse("重新请求")
     elif request.method == "GET":
         data = []
+        # 统计用户数量
+        blog_user = models.BlogUser.objects.count()
         # 统计博客数量
         blog_count = models.Blog.objects.count()
         # 统计用户的评论数量
@@ -913,7 +916,8 @@ def echarts(request):
              'dislikes': attached.total_dislikes, 'comments': attached.total_comments,
              'collect': attached.total_collect} for attached in top_blogs_attached]
         data_child = {
-            'blog_count': blog_count, 'user_comment': user_comment, 'category_count_all': category_count_all,
+            'blog_user': blog_user, 'blog_count': blog_count,
+            'user_comment': user_comment, 'category_count_all': category_count_all,
             'like_count': like_count, 'dislike_count': dislike_count,
         }
         data.append(data_child)
