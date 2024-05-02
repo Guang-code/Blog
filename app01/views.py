@@ -27,6 +27,7 @@ from django.db.models import F
 # 导入redis相关宝
 from django.core.cache import cache
 
+
 """
 Django REST Framework（简称DRF）是一个基于 Django 的强大框架，用于构建 Web API。它提供了一整套工具和库，
 帮助开发者轻松地构建和管理Web API，包括序列化、验证、视图、路由、认证、权限控制、文档生成等功能。
@@ -356,15 +357,19 @@ def add_tags_to_blog(blog, classification):
 def bloginfo_search(request):
     """ 博客信息查询 在首页展示 """
     if request.method == "GET":
+        # print(request.body)
+        # print(request.method)
         # 判断Redis中是否有缓存数据
-        redis_key = 'attached'
-        redis_value = cache.get(redis_key)
-        # object_list = None
+        # redis_key = 'attached'
+        # redis_value = cache.get(redis_key)
+        # # object_list = None
         # if redis_value and len(redis_value) > 0:
-        #     #     object_list = redis_value
+        #         # object_list = redis_value
         #     return JsonResponse({'status': True, 'data': redis_value,'msg':'这是来自redis的数据'}, safe=False)
         # else:
         attached_records = models.Attached.objects.filter(like__gt=1)
+        # attached_records = models.Attached.objects.all()
+        print(attached_records)
         top_blogs_ids = [attached_record.blog for attached_record in attached_records]
         # 从 top_blogs_ids 中提取每个 Blog 对象的 id
         top_blogs_ids = [blog.id for blog in top_blogs_ids]
@@ -390,7 +395,7 @@ def bloginfo_search(request):
             }
             blogs_data.append(blog_data)
 
-            # 将数据放入Redis缓存
+            # # 将数据放入Redis缓存
             # cache.set(redis_key, blogs_data)
 
         return JsonResponse({'status': True, 'data': blogs_data}, safe=False)
