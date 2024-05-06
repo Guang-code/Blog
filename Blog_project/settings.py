@@ -97,14 +97,14 @@ DATABASES = {
         'CHARSET': 'utf8mb4',
     },
     # SAE数据库配置
-    'remote': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'xxx',
-        'USER': 'xxx',
-        'PASSWORD': 'xxx',
-        'HOST': 'w.rdc.sae.sina.com.cn',
-        'PORT': '3307',
-    }
+    # 'remote': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'xxx',
+    #     'USER': 'xxx',
+    #     'PASSWORD': 'xxx',
+    #     'HOST': 'w.rdc.sae.sina.com.cn',
+    #     'PORT': '3307',
+    # }
 }
 
 #设置路由类
@@ -145,10 +145,14 @@ USE_TZ = True #
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/dist/'
-STATICFILES_DIRS=[
-    os.path.join(BASE_DIR, 'static/dist/')
-]
+
+STATIC_URL = '/static/'
+
+
+# STATIC_URL = 'static/dist/'
+# STATICFILES_DIRS=[
+#     os.path.join(BASE_DIR, 'static/dist/')
+# ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
