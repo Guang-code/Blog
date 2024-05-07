@@ -3,7 +3,7 @@ pytz==2023.3.post1
 sqlparse==0.4.4
 Django==4.2.7
 Markdown==3.5
-PyMySQL==1.10
+PyMySQL==1.1.0
 django-redis==5.4.0
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
