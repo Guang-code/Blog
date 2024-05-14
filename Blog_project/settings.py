@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-ufr6200zh1ryjd2q0%f@&dsi*#88&f#wrxl4jpgaqho*wu1)-g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['101.35.214.160']
 
 
 # Application definition
@@ -56,6 +56,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+# CORS_ALLOWED_ORIGINS = [
+#     # 添加允许的前端域名，例如：
+# ]
+# 可选配置：允许所有源 与上面CORS_ALLOWED_ORIGINS二选一
+CORS_ALLOW_ALL_ORIGINS = True
 # 跨域设置 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
