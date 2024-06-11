@@ -29,7 +29,8 @@ SECRET_KEY = 'django-insecure-ufr6200zh1ryjd2q0%f@&dsi*#88&f#wrxl4jpgaqho*wu1)-g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['101.35.214.160']
+ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['101.35.214.160']
 
 
 # Application definition
@@ -92,24 +93,24 @@ WSGI_APPLICATION = 'Blog_project.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.mysql',
-    #     'NAME':  'blog_project',
-    #     'USER': 'root',
-    #     'PASSWORD': '123456',
-    #     'HOST': '127.0.0.1',
-    #     'PORT': 3306,
-    #     'CHARSET': 'utf8mb4',
-    # },
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME':  'blog_project',
         'USER': 'root',
         'PASSWORD': '123456',
-        'HOST': 'mysql',
+        'HOST': '127.0.0.1',
         'PORT': 3306,
         'CHARSET': 'utf8mb4',
     },
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME':  'blog_project',
+    #     'USER': 'root',
+    #     'PASSWORD': '123456',
+    #     'HOST': 'mysql',
+    #     'PORT': 3306,
+    #     'CHARSET': 'utf8mb4',
+    # },
     # SAE数据库配置
     # 'remote': {
     #     'ENGINE': 'django.db.backends.mysql',

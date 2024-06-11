@@ -17,6 +17,8 @@ urlpatterns = [
     path('bloguser/', views.bloguser),
     # 博客用查询
     path('bloguser/search/', views.bloguser_search),
+    # 用户相关博客查询
+    path('bloguser/blog/', views.bloguser_blog),
     # 博客信息添加
     path('bloginfo/', views.bloginfo),
     # 博客更新

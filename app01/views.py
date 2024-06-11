@@ -4,6 +4,7 @@ from django.shortcuts import render
 
 from django.shortcuts import HttpResponse, redirect
 from django.core.serializers import serialize
+from django.shortcuts import get_object_or_404
 import json
 
 from . import models
@@ -150,6 +151,7 @@ def bloguser(request):
     if request.method == "GET":
         return HttpResponse("重新登录")
     elif request.method == "POST":
+        print(request.POST)
         username = request.POST.get("username")
         res = models.BlogUser.objects.filter(username=username)
         print(res)
@@ -159,7 +161,18 @@ def bloguser(request):
             password = request.POST.get("password")
             career = request.POST.get("career")
             email = request.POST.get("email")
-            user = models.BlogUser.objects.create(username=username, password=password, career=career, email=email)
+            gender_str = request.POST.get("gender", '隐藏')  # 获取性别，默认为'2'（未知）
+            print('这是gender_str：', gender_str, type(gender_str))
+            # 映射前端性别字符串到数据库中的整数值
+            gender_map = {'女': 0, '男': 1, '隐藏': 2}
+            gender = gender_map.get(gender_str, 2)  # 默认为'2'（未知
+            print(gender, type(gender_str))
+            user = models.BlogUser.objects.create(
+                username=username,
+                password=password,
+                career=career,
+                gender=gender,
+                email=email)
             user.save()
             res = models.BlogUser.objects.filter(username=username)
             serialized_data = [{'username': item.username, 'password': item.password, 'gender': item.gender,
@@ -239,6 +252,44 @@ def bloguser_search(request):
             return JsonResponse({'status': True, 'token': token, 'data': serialized_data}, safe=False)
         return JsonResponse(ret, safe=False)
 
+# 根据用户id，查找该用户的所有博客
+@auth
+def bloguser_blog(request):
+    if request.method == 'POST':
+        try:
+            username = request.POST.get("username")
+            # 获取用户对象
+            user = get_object_or_404(models.BlogUser, username=username)
+            # 获取该用户所有博客
+            blogs = models.Blog.objects.filter(username=user).order_by('-createtime')[:15]
+
+            # 构建博客数据列表，同时获取每个博客的所有相关标签信息
+            blogs_data = []
+            for blog in blogs:
+                # 获取博客对象的所有标签信息
+                labels = blog.classification.all()
+                labels_data = [{'classification': label.classification, 'name': label.title} for label in labels]
+                # 获取博客对象对应的用户信息，并转换为字典格式
+                user_data = blog.username.username
+                # 构建博客数据字典
+                blog_data = {
+                    'id': blog.id,
+                    'title': blog.title,
+                    'createtime': blog.createtime,
+                    'text': blog.text,
+                    'summary': blog.summary,
+                    'username': user_data,
+                    'labels': labels_data
+                }
+                blogs_data.append(blog_data)
+
+            return JsonResponse({'status': True, 'data': blogs_data}, safe=False)
+        except models.BlogUser.DoesNotExist:
+            return JsonResponse({'status': False, 'error': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': False, 'error': str(e)}, status=403)
+    else:
+        return JsonResponse({'status': False, 'error': '访问方法错误'}, status=401)
 
 @auth
 # 博客信息添加API，获取POST请求中的信息添加到数据库
@@ -256,7 +307,7 @@ def bloginfo(request):
         classification = request.POST.get("classification")
         user = models.BlogUser.objects.filter(username=username).first()
         classification = json.loads(classification)
-        print(classification, type(classification))
+        # print(classification, type(classification))
 
         # classifications = request.POST.getlist('classification')
         # print(request.POST.getlist('classification'))
@@ -264,9 +315,9 @@ def bloginfo(request):
             # classification = tuple(classification)
             # print(type(classification))
             for tag in classification:
-                print(tag)
+                # print(tag)
                 tag, created = models.Category.objects.get_or_create(title=tag)
-                print(tag)
+                # print(tag)
                 if created:
                     print(f"标签{tag}不存在，已创建")
                 blog.classification.add(tag)
@@ -290,20 +341,20 @@ def bloginfo_delete(request):
     elif request.method == "POST":
         print(request.POST)
         # blog_id = request.POST.get("blog_id")
-    try:
-        blog = models.Blog.objects.get(id=request.POST.get("blog_id"))
-        # 删除与博客相关的评论
-        blog.comments.all().delete()
-        # 删除与博客相关的附属信息
-        models.Attached.objects.filter(blog=blog).delete()
-        # 删除博客本身
-        blog.delete()
+        try:
+            blog = models.Blog.objects.get(id=request.POST.get("blog_id"))
+            # 删除与博客相关的评论
+            blog.comments.all().delete()
+            # 删除与博客相关的附属信息
+            models.Attached.objects.filter(blog=blog).delete()
+            # 删除博客本身
+            blog.delete()
 
-        return JsonResponse({'status': True, 'message': "博客删除成功"}, status=204, safe=False)
-    except models.Blog.DoesNotExist:
-        return JsonResponse({'status': False, 'message': "博客删除成功"}, status=404, safe=False)
-    except Exception as e:
-        return False, str(e)
+            return JsonResponse({'status': True, 'message': "博客删除成功"}, status=200, safe=False)
+        except models.Blog.DoesNotExist:
+            return JsonResponse({'status': False, 'message': "博客不存在"}, status=404, safe=False)
+        except Exception as e:
+            return JsonResponse({'status': False, 'message': f"删除博客时出错: {str(e)}"}, status=500)
 
 
 def bloginfo_update(request):
@@ -357,25 +408,15 @@ def add_tags_to_blog(blog, classification):
 def bloginfo_search(request):
     """ 博客信息查询 在首页展示 """
     if request.method == "GET":
-        # print(request.body)
-        # print(request.method)
-        # 判断Redis中是否有缓存数据
-        # redis_key = 'attached'
-        # redis_value = cache.get(redis_key)
-        # # object_list = None
-        # if redis_value and len(redis_value) > 0:
-        #         # object_list = redis_value
-        #     return JsonResponse({'status': True, 'data': redis_value,'msg':'这是来自redis的数据'}, safe=False)
-        # else:
         attached_records = models.Attached.objects.filter(like__gt=1)
         # attached_records = models.Attached.objects.all()
-        print(attached_records)
+        # print(attached_records)
         top_blogs_ids = [attached_record.blog for attached_record in attached_records]
         # 从 top_blogs_ids 中提取每个 Blog 对象的 id
         top_blogs_ids = [blog.id for blog in top_blogs_ids]
         # 获取这些博客对象
         top_blogs = models.Blog.objects.filter(id__in=top_blogs_ids)
-        print(top_blogs)
+        # print(top_blogs)
         # 构建博客数据列表，同时获取每个博客的所有相关标签信息
         blogs_data = []
         for blog in top_blogs:
@@ -502,10 +543,12 @@ def category_title_all(request):
 
 def category_detail(request):
     """展示所有标签的详细信息"""
+    # if request.method == 'GET':
     res = models.Category.objects.all()[:15]
     serialized_data = [{'classification': item.classification, 'title': item.title} for
                        item in res]
     return JsonResponse({'status': 200, 'data': serialized_data}, safe=False)
+    # return JsonResponse({'status': 200, 'message': "访问错误"}, safe=False)
     # return JsonResponse({'status': True, 'data': list(serialized_data)}, safe=False)
     # return JsonResponse(serialized_data, safe=False)
 
@@ -517,12 +560,35 @@ def category_blog_all(request):
         print(request.POST)
         try:
             title = request.POST.get("title")
+            # # 获取标签对象
+            # label = models.Category.objects.get(title=title)
             # 获取标签对象
-            label = models.Category.objects.get(title=title)
+
+            label = get_object_or_404(models.Category, title=title)
             # 使用反向关联查询获取拥有该标签的所有博客
-            blogs = label.blog_set.all()[:15]
+            blogs = label.blog.all()[:15]
             # 将查询到的博客信息转换为字典列表
-            blogs_data = [{'id': blog.id, 'title': blog.title} for blog in blogs]
+            # blogs_data = [{'id': blog.id, 'title': blog.title} for blog in blogs]
+            # print(blogs_data)
+            # 构建博客数据列表，同时获取每个博客的所有相关标签信息
+            blogs_data = []
+            for blog in blogs:
+                # 获取博客对象的所有标签信息
+                labels = blog.classification.all()
+                labels_data = [{'classification': label.classification, 'name': label.title} for label in labels]
+                # 获取博客对象对应的用户信息，并转换为字典格式
+                user_data = blog.username.username
+                # 构建博客数据字典
+                blog_data = {
+                    'id': blog.id,
+                    'title': blog.title,
+                    'createtime': blog.createtime,
+                    'text': blog.text,
+                    'summary': blog.summary,
+                    'username': user_data,
+                    'labels': labels_data
+                }
+                blogs_data.append(blog_data)
             return JsonResponse({'status': True, 'data': blogs_data}, safe=False)
         except models.Category.DoesNotExist:
             return JsonResponse({'error': 'Label not found'}, status=404)
@@ -610,25 +676,51 @@ def attached_search(request):
         # 根据 id 获取对应的 Attached 实例
         attached_instance = models.Attached.objects.filter(blog=id).first()
         # print(attached_instance)
+        # 获取关联的博客实例
+        blog_instance = models.Blog.objects.filter(id=id).first()
+        if not blog_instance:
+            return JsonResponse({'status': 404, 'message': "博客未找到"}, status=404, safe=False)
         if attached_instance:
-            # 获取关联的博客实例
-            blog_instance = attached_instance.blog
             # 获取点赞等相关信息
             serialized_attached_data = serialize('json', [attached_instance])
-            # 获取所有标签信息
-            classifications = blog_instance.classification.all()
-            classification_list = [{'title': classification.title} for classification in classifications]
+        else:
+            # 没有点赞记录时，返回默认的空记录
+            serialized_attached_data = '[]'
 
-            # 构建完整的 JSON 数据
-            response_data = {
-                'status': True,
-                'attached_data': serialized_attached_data,
-                'classification_data': classification_list
-            }
+        # 获取所有标签信息
+        classifications = blog_instance.classification.all()
+        classification_list = [{'classification': classification.classification, 'title': classification.title} for
+                               classification in classifications]
 
-            return JsonResponse(response_data, status=200, safe=False)
+        # 构建完整的 JSON 数据
+        response_data = {
+            'status': True,
+            'attached_data': serialized_attached_data,
+            'classification_data': classification_list
+        }
 
-        return JsonResponse({'status': 404, 'message': "没有找到"}, status=404, safe=False)
+        return JsonResponse(response_data, status=200, safe=False)
+
+    return JsonResponse({'status': 405, 'message': "方法不被允许"}, status=405, safe=False)
+        # if attached_instance:
+        #     # 获取关联的博客实例
+        #     blog_instance = attached_instance.blog
+        #     # 获取点赞等相关信息
+        #     serialized_attached_data = serialize('json', [attached_instance])
+        #     # 获取所有标签信息
+        #     classifications = blog_instance.classification.all()
+        #     classification_list = [{'classification':classification.classification, 'title': classification.title} for classification in classifications]
+        #
+        #     # 构建完整的 JSON 数据
+        #     response_data = {
+        #         'status': True,
+        #         'attached_data': serialized_attached_data,
+        #         'classification_data': classification_list
+        #     }
+        #
+        #     return JsonResponse(response_data, status=True, safe=False)
+        #
+        # return JsonResponse({'status': 200, 'message': "没有该实例,默认点赞为0，不显示"}, status=200, safe=False)
 
 
 @auth
@@ -666,9 +758,17 @@ def search_bloglike(request):
                  'collect': bloglike.collect}
             ]
             # data = serialize('json', [bloglike],)
-            return JsonResponse({'status': True, 'data': data}, status=200, safe=False)
+            # return JsonResponse({'status': True, 'data': data}, status=200, safe=False)
         else:
-            return JsonResponse({'status': False, 'data': '数据不存在'}, status=404, safe=False)
+            data2 = [
+                {'id': blog_id, 'like': 0, 'dislike': 0,
+                 'collect': 0}
+            ]
+            return JsonResponse({'status': 203, 'data': data2, 'message': '暂无点赞记录'}, status=200, safe=False)
+
+        return JsonResponse({'status': True, 'data': data}, status=200, safe=False)
+    else:
+        return JsonResponse({'status': False, 'message': '请求失败'}, status=404, safe=False)
 
 
 @auth
@@ -677,12 +777,14 @@ def bloglike(request):
     if request.method == "GET":
         return HttpResponse("重新登录")
     elif request.method == "POST":
-        # print(request.POST)
+        print(request.POST)
         blog_id = request.POST.get("blog_id")
         username = request.POST.get("username")
         # 获取或创建 BlogUser 实例
-        blog_instance, created = models.Blog.objects.get_or_create(id=blog_id)
-        user_instance, created = models.BlogUser.objects.get_or_create(username=username)  # 假设用户名是唯一的
+        # blog_instance, created = models.Blog.objects.get_or_create(id=blog_id)
+        blog_instance = models.Blog.objects.get(id=blog_id)
+        # user_instance, created = models.BlogUser.objects.get_or_create(username=username)  # 假设用户名是唯一的
+        user_instance = models.BlogUser.objects.get(username=username)
         # 获取现有的 Bloglike 实例（如果存在）
         bloglike_obj, created = models.Bloglike.objects.get_or_create(
             blog=blog_instance, username=user_instance
@@ -710,8 +812,8 @@ def bloglike(request):
         # print(bloglike_obj)
 
         return JsonResponse({'status': True, 'data': "创建数据成功"}, status=201, safe=False)
-        # else:
-        # return JsonResponse({'status': True, 'data': '数据更新成功'}, status=200, safe=False)
+    else:
+        return JsonResponse({'status': False, 'data': '请求失败'}, status=404, safe=False)
 
 
 @auth
@@ -760,6 +862,8 @@ def comment(request):
         # blogcomment_obj.text = request.POST.get("text")
         # blogcomment_obj.save()
         return JsonResponse({'status': True, 'data': "创建数据成功"}, status=201, safe=False)
+    else:
+        return JsonResponse({'status': False, 'data': '请求失败'}, status=404, safe=False)
 
 
 @auth
@@ -768,7 +872,7 @@ def comment_search(request):
     if request.method == "GET":
         return HttpResponse("重新登录")
     elif request.method == "POST":
-        print('这是请求的数据111', request.POST)
+        # print('这是请求的数据111', request.POST)
         blog_id = request.POST.get("blog_id")
         if blog_id is None:
             return JsonResponse({'status': False, 'data': "未提供有效id"}, status=400, safe=False)
@@ -848,11 +952,11 @@ def blogs(request):
         print('这是请求的数据111', request.POST)
         username = request.POST.get('username')
         username_instance = models.BlogUser.objects.get(username=username)
-        print(username_instance)
+        # print(username_instance)
         # 获取所有博客实例
-        blogs_instance = models.Blog.objects.filter(username=username_instance).order_by('createtime')
+        blogs_instance = models.Blog.objects.filter(username=username_instance).order_by('-createtime')
         # 使用分页器进行分页，每页显示5条评论
-        paginator = Paginator(blogs_instance, 3)
+        paginator = Paginator(blogs_instance, 6)
 
         # 获取请求页码，默认为第一页
         page_number = request.POST.get('page', 1)
@@ -879,7 +983,7 @@ def blogs(request):
             data.append(blogs_data)
         print(data)
         return JsonResponse({'status': True, 'data': data}, status=200, safe=False)
-    return JsonResponse({'status': False, 'message': '不支持的请求方法'}, status=405, safe=False)
+    return JsonResponse({'status': False, 'message': '不支持的请求方法'}, status=401, safe=False)
 
 
 #  数据可视化，
@@ -915,7 +1019,7 @@ def echarts(request):
             total_dislikes=F('dislike'),
             total_comments=F('comment'),
             total_collect=F('collect'),
-        ).order_by('total_likes')[:3]
+        ).order_by('-total_likes')[:3]
         blog_data = [
             {'blog_id': attached.blog.id, 'blog': attached.blog.title, 'likes': attached.total_likes,
              'dislikes': attached.total_dislikes, 'comments': attached.total_comments,
@@ -926,5 +1030,6 @@ def echarts(request):
             'like_count': like_count, 'dislike_count': dislike_count,
         }
         data.append(data_child)
+        print(blog_data)
         showdata = {'data': data, 'blog_data': blog_data, 'category_count': category_count}
         return JsonResponse({'status': True, 'data': showdata}, status=200, safe=False)

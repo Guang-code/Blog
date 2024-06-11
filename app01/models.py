@@ -49,7 +49,7 @@ class Blog(models.Model):
     # comment_count = models.IntegerField(default=0, verbose_name='评论数量')
 
 
-""" 点赞 不喜欢 收藏表 """
+""" 点赞 不喜欢 收藏表 附属信息表 """
 class Bloglike(models.Model):
     id = models.AutoField(primary_key=True, verbose_name='ID')
     like = models.BooleanField(default=False, verbose_name='点赞')
@@ -65,19 +65,55 @@ def update_attached(sender, instance, **kwargs):
     每当有新的Bloglike记录被创建时，更新Attached表中对应博客的数据统计
     """
     blog = instance.blog
-    attached, created = Attached.objects.get_or_create(blog=blog.id)
+    attached, created = Attached.objects.get_or_create(blog=blog)
+    # if instance.like:
+    #     attached.like += 1
+    # else:
+    #     attached.like -= 1 if attached.like > 0 else 0
+    # if instance.dislike:
+    #     attached.dislike += 1
+    # else:
+    #     attached.dislike -= 1 if attached.dislike > 0 else 0
+    # if instance.collect:
+    #     attached.collect += 1
+    # else:
+    #     attached.collect -= 1 if attached.collect > 0 else 0
+    # attached.save()
+    # update_fields = kwargs.get('update_fields', set())
+    #
+    # if instance.like:
+    #     attached.like += 1
+    # elif 'like' in update_fields and attached.like > 0:
+    #     attached.like -= 1
+    #
+    # if instance.dislike:
+    #     attached.dislike += 1
+    # elif 'dislike' in update_fields and attached.dislike > 0:
+    #     attached.dislike -= 1
+    #
+    # if instance.collect:
+    #     attached.collect += 1
+    # elif 'collect' in update_fields and attached.collect > 0:
+    #     attached.collect -= 1
+    #
+    # attached.save()
+    # 获取传递了的参数
+    update_fields = kwargs.get('update_fields', set())
     if instance.like:
         attached.like += 1
-    else:
-        attached.like -= 1 if attached.like > 0 else 0
+    elif update_fields and 'like' in update_fields and attached.like > 0:
+        attached.like -= 1
+
     if instance.dislike:
         attached.dislike += 1
-    else:
-        attached.dislike -= 1 if attached.dislike > 0 else 0
+    elif update_fields and 'dislike' in update_fields and attached.dislike > 0:
+        attached.dislike -= 1
+
     if instance.collect:
         attached.collect += 1
-    else:
-        attached.collect -= 1 if attached.collect > 0 else 0
+    elif update_fields and 'collect' in update_fields and attached.collect > 0:
+        attached.collect -= 1
+
     attached.save()
 
 class Category(models.Model):
